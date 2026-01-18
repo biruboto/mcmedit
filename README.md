@@ -7,7 +7,7 @@
 | ||_|| ||     |_ | ||_|| ||   |___ |       ||   |   |   |  
 |_|   |_||_______||_|   |_||_______||______| |___|   |___|  
 ```
-A small command-line tool for editing MAX7456 / AT7456E OSD font (.mcm) files for use in analog FPV systems (Betaflight).
+A small command-line tool for converting MAX7456/AT7456E OSD font (.mcm) files to and from PNG for use in analog FPV systems (Betaflight).
 
 ## Usage
 
