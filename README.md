@@ -18,7 +18,12 @@ You can then convert your modified .png back into an .mcm to upload to your quad
 ## Usage
 
 ```bash
+To go from an MCM to a PNG:
 mcmedit.py mcm2sheet font.mcm sheet.png
+
+To go from a PNG to an MCM:
 mcmedit.py sheet2mcm sheet.png font.mcm
+
+To insert your pre-made splash logo into an MCM:
 mcmedit.py inject-logo font.mcm logo_288x72.png out.mcm
 ```
