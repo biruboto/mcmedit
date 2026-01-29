@@ -68,12 +68,8 @@ def _ok(msg: str) -> None:
     else:
         print(f"OK: {msg}")
 
-
-def _err(msg: str, code: int = 2) -> "NoReturn":
-    if USE_COLOR:
-        print(f"{RED}ERROR:{RESET} {msg}", file=sys.stderr)
-    else:
-        print(f"ERROR: {msg}", file=sys.stderr)
+def _err(msg: str, code: int = 2):
+    print(f"ERROR: {msg}", file=sys.stderr)
     raise SystemExit(code)
 
 
