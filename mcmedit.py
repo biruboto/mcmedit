@@ -22,8 +22,9 @@ The encoder never emits value 3.
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
 from PIL import Image
 
@@ -53,6 +54,27 @@ VAL_WHITE = 2
 INJECT_START = 0xA0
 INJECT_END = 0xFF
 INJECT_COUNT = INJECT_END - INJECT_START + 1  # 96
+
+USE_COLOR = sys.stderr.isatty() or sys.stdout.isatty()
+
+GREEN = "\033[32m"
+RED = "\033[31m"
+RESET = "\033[0m"
+
+
+def _ok(msg: str) -> None:
+    if USE_COLOR:
+        print(f"{GREEN}OK:{RESET} {msg}")
+    else:
+        print(f"OK: {msg}")
+
+
+def _err(msg: str, code: int = 2) -> "NoReturn":
+    if USE_COLOR:
+        print(f"{RED}ERROR:{RESET} {msg}", file=sys.stderr)
+    else:
+        print(f"ERROR: {msg}", file=sys.stderr)
+    raise SystemExit(code)
 
 
 def _read_mcm_text(path: Path) -> List[bytes]:
@@ -115,6 +137,7 @@ def _decode_glyph_to_values(glyph64: bytes) -> List[int]:
             vals[y * GLYPH_W + x] = v
     return vals
 
+
 def _rgb_to_val(rgb):
     if rgb == RGB_BLACK:
         return VAL_BLACK
@@ -125,7 +148,6 @@ def _rgb_to_val(rgb):
     raise ValueError(
         f"Illegal pixel color {rgb}. Allowed: black {RGB_BLACK}, gray {RGB_GRAY}, green {RGB_GREEN}, white {RGB_WHITE}."
     )
-
 
 
 def _tile_to_glyph_bytes(tile_rgb: Image.Image) -> bytes:
@@ -249,7 +271,7 @@ examples:
   mcmedit.py mcm2sheet font.mcm sheet.png
   mcmedit.py sheet2mcm sheet.png font.mcm
   mcmedit.py inject-logo font.mcm logo_288x72.png font_with_logo.mcm
-"""
+""",
     )
 
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -258,7 +280,7 @@ examples:
     p_a = sub.add_parser(
         "mcm2sheet",
         help="Convert .mcm -> 192x288 PNG sheet",
-        description="Extract all 256 glyphs into a 16x16 PNG sheet (12x18 per glyph)."
+        description="Extract all 256 glyphs into a 16x16 PNG sheet (12x18 per glyph).",
     )
     p_a.add_argument("mcm", type=Path, metavar="FONT.mcm")
     p_a.add_argument("png", type=Path, metavar="SHEET.png")
@@ -267,7 +289,7 @@ examples:
     p_b = sub.add_parser(
         "sheet2mcm",
         help="Convert 192x288 PNG sheet -> .mcm",
-        description="Build a full .mcm font from a 192x288 glyph sheet."
+        description="Build a full .mcm font from a 192x288 glyph sheet.",
     )
     p_b.add_argument("png", type=Path, metavar="SHEET.png")
     p_b.add_argument("mcm", type=Path, metavar="FONT.mcm")
@@ -281,7 +303,7 @@ Injects a pre-tiled logo into glyph indices 0xA0–0xFF (96 tiles).
 
 example:
   mcmedit.py inject-logo base_font.mcm logo_288x72.png out.mcm
-"""
+""",
     )
     p_c.add_argument("base_mcm", type=Path, metavar="BASE_FONT.mcm")
     p_c.add_argument("logo_png", type=Path, metavar="LOGO.png")
@@ -289,16 +311,48 @@ example:
 
     args = p.parse_args()
 
+    # Simple up-front existence checks (user-friendly errors)
+    # (We only check inputs, not outputs.)
     if args.cmd == "mcm2sheet":
+        if not args.mcm.exists():
+            _err(f"Input font not found: {args.mcm}")
         mcm_to_sheet(args.mcm, args.png)
-    elif args.cmd == "sheet2mcm":
-        sheet_to_mcm(args.png, args.mcm)
-    elif args.cmd == "inject-logo":
-        inject_logo(args.base_mcm, args.logo_png, args.out_mcm)
-    else:
-        raise SystemExit("Unknown command")
+        _ok(f"Wrote {args.png} ({SHEET_W}x{SHEET_H}) from {args.mcm}")
 
+    elif args.cmd == "sheet2mcm":
+        if not args.png.exists():
+            _err(f"Input sheet not found: {args.png}")
+        sheet_to_mcm(args.png, args.mcm)
+        _ok(f"Wrote {args.mcm} from {args.png}")
+
+    elif args.cmd == "inject-logo":
+        if not args.base_mcm.exists():
+            _err(f"Base font not found: {args.base_mcm}")
+        if not args.logo_png.exists():
+            _err(f"Logo PNG not found: {args.logo_png}")
+        inject_logo(args.base_mcm, args.logo_png, args.out_mcm)
+        _ok(f"Wrote {args.out_mcm} (logo injected A0–FF)")
+
+    else:
+        _err("Unknown command", code=2)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except (FileNotFoundError, PermissionError) as e:
+        _err(str(e), code=2)
+    except (ValueError, OSError) as e:
+        # OSError catches PIL image decode errors nicely too.
+        _err(str(e), code=2)
+    except Exception as e:
+        # True “something went sideways” case.
+        print(
+        f"{RED}FATAL:{RESET} {e.__class__.__name__}: {e}"
+        if USE_COLOR else
+        f"FATAL: {e.__class__.__name__}: {e}",
+        file=sys.stderr
+)
+
