@@ -55,6 +55,16 @@ INJECT_START = 0xA0
 INJECT_END = 0xFF
 INJECT_COUNT = INJECT_END - INJECT_START + 1  # 96
 
+# Replaceable character set (for quick copy/paste into editors)
+PRINTABLE_CHARS_LINES = [
+    ' !"# %&\'()*+,-./',
+    '0123456789:;<=>?',
+    '@ABCDEFGHIJKLMNO',
+    'PQRSTUVWXYZ[\\]^_',
+]
+PRINTABLE_CHARS = "\n".join(PRINTABLE_CHARS_LINES) + "\n"
+
+
 USE_COLOR = sys.stderr.isatty() or sys.stdout.isatty()
 
 GREEN = "\033[32m"
@@ -305,7 +315,20 @@ example:
     p_c.add_argument("logo_png", type=Path, metavar="LOGO.png")
     p_c.add_argument("out_mcm", type=Path, metavar="OUTPUT.mcm")
 
+    # print
+    p_d = sub.add_parser(
+        "print",
+        help="Print the replaceable character set (for copy/paste)",
+        description="Print the replaceable characters as a 4-line block for easy copy/paste into Photoshop (or anywhere).",
+    )
+
     args = p.parse_args()
+
+    if args.cmd == "print":
+        # Exactly as shown (including leading spaces).
+        sys.stdout.write(PRINTABLE_CHARS)
+        return
+
 
     # Simple up-front existence checks (user-friendly errors)
     # (We only check inputs, not outputs.)
